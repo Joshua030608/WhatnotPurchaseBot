@@ -55,5 +55,18 @@
     return { waitingForOutbid: true, seenNonOutbid: false, freshOutbid: false };
   }
 
-  return { actions, evaluate, participationAfterAction, advanceParticipation };
+  function advanceTestParticipation(participation, nextBidCents, lastSimulatedBidCents) {
+    const current = participation || { waitingForOutbid: false, seenNonOutbid: false };
+    if (
+      current.waitingForOutbid
+      && Number.isInteger(nextBidCents)
+      && Number.isInteger(lastSimulatedBidCents)
+      && nextBidCents > lastSimulatedBidCents
+    ) {
+      return { waitingForOutbid: false, seenNonOutbid: false, freshOutbid: true };
+    }
+    return { ...current, freshOutbid: false };
+  }
+
+  return { actions, evaluate, participationAfterAction, advanceParticipation, advanceTestParticipation };
 });

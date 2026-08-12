@@ -1,6 +1,6 @@
 (function (root, factory) {
-  root.WhatnotPageAdapter = factory(root.WhatnotBotMoney);
-})(globalThis, function (money) {
+  root.WhatnotPageAdapter = factory(root.WhatnotBotMoney, root.WhatnotBotInteraction);
+})(globalThis, function (money, interaction) {
   const priceSelectors = [
     "[data-wnpb-role='current-price']",
     "[data-testid*='current-bid' i]",
@@ -90,6 +90,8 @@
 
   function findAuctionRoot(button) {
     if (!button) return document.body;
+    const livePlayer = button.closest("section[class*='LivePlayer_livePlayer__']");
+    if (livePlayer) return livePlayer;
     const explicit = button.closest("[data-wnpb-auction], [data-testid*='auction' i], [data-testid*='live-item' i]");
     if (explicit) return explicit;
     let current = button.parentElement;
@@ -139,7 +141,20 @@
       const cents = money.parsePriceText(text);
       if (Number.isInteger(cents)) return { cents, text, element };
     }
+    const exactPrices = Array.from(auctionRoot.querySelectorAll("strong, span, div"));
+    for (const element of exactPrices.slice(0, 500)) {
+      if (!isVisible(element) || element.closest("[data-testid='show-bid-button'], [data-wnpb-role='bid-button']")) continue;
+      const text = cleanText(element.innerText || element.textContent);
+      if (!/^(?:US\$|CA\$|AU\$|NZ\$|[\$£€])\s*\d[\d.,]*$/i.test(text)) continue;
+      const cents = money.parsePriceText(text);
+      if (Number.isInteger(cents)) return { cents, text, element };
+    }
     return nextBid ? null : readFirstPrice(auctionRoot, ["[data-price]"]);
+  }
+
+  function readViewerUsername() {
+    const avatar = document.querySelector("#team-invite-profile-menu-anchor img[alt]");
+    return cleanText(avatar && avatar.getAttribute("alt")).toLowerCase();
   }
 
   function readBidState(auctionRoot) {
@@ -162,10 +177,30 @@
     const text = cleanText(texts.join(" "));
     if (/you(?:'ve| have)?\s+been\s+outbid|you(?:'re| are)\s+outbid|\boutbid\b/i.test(text)) return "outbid";
     if (/you(?:'re| are)\s+(?:currently\s+)?winning|you(?:'re| are)\s+(?:the\s+)?highest\s+bidder/i.test(text)) return "winning";
+    const winnerMatch = cleanText(auctionRoot.innerText).match(/(?:^|\s)([a-z0-9_.-]+)\s+is\s+Winning!/i);
+    if (winnerMatch) {
+      const viewer = readViewerUsername();
+      return viewer && winnerMatch[1].toLowerCase() === viewer ? "winning" : "outbid";
+    }
     return "neutral";
   }
 
+  function readBidConfirmation(auctionRoot) {
+    return Array.from(auctionRoot.querySelectorAll("[aria-label], [role='status']")).some((element) => (
+      isVisible(element) && /\bbid\s+confirmed\b/i.test(elementText(element))
+    ));
+  }
+
   function readTitle(auctionRoot) {
+    const detailsButton = Array.from(auctionRoot.querySelectorAll("button")).find((button) => {
+      if (!isVisible(button) || button.matches("[data-testid='show-bid-button']")) return false;
+      const text = cleanText(button.innerText || button.textContent);
+      return /\b\d+\s+Bids?\b/i.test(text) && /Shipping/i.test(text);
+    });
+    if (detailsButton) {
+      const title = cleanText(detailsButton.querySelector("strong")?.textContent);
+      if (title) return title;
+    }
     for (const selector of titleSelectors) {
       const element = queryVisible(auctionRoot, selector);
       if (!element) continue;
@@ -197,6 +232,7 @@
     const ended = auctionRoot.getAttribute("data-wnpb-ended") === "true" || /\b(auction\s+ended|auction\s+closed|item\s+sold|sold\s+to)\b/i.test(rootText);
     const title = readTitle(auctionRoot);
     const bidState = readBidState(auctionRoot);
+    const bidConfirmed = readBidConfirmation(auctionRoot);
     const supported = Boolean(button && nextBid);
     return {
       supported,
@@ -207,6 +243,7 @@
       nextBidCents: nextBid ? nextBid.cents : null,
       currencySymbol: money.currencySymbol((nextBid && nextBid.text) || (currentPrice && currentPrice.text) || "$"),
       bidState,
+      bidConfirmed,
       auctionKey: readAuctionKey(auctionRoot, title),
       title,
       buttonText: button ? elementText(button) : null,
@@ -236,34 +273,65 @@
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 
+  async function activateBidButton(button) {
+    const sequence = interaction.activationSequence(button.getAttribute("data-testid"));
+    if (sequence.length === 1 && sequence[0] === "click") {
+      HTMLButtonElement.prototype.click.call(button);
+      return { completed: true, sequence };
+    }
+    const rect = button.getBoundingClientRect();
+    button.dispatchEvent(new MouseEvent("mousedown", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+      button: 0,
+      buttons: 1,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2
+    }));
+    await delay(40);
+    if (!button.isConnected) return { completed: false, sequence: ["mousedown"] };
+    button.dispatchEvent(new MouseEvent("mouseup", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+      button: 0,
+      buttons: 0,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2
+    }));
+    return { completed: true, sequence };
+  }
+
   async function clickBid(expectedCents) {
     const before = probe();
     if (!before.supported || !before.bidButtonAvailable || before.nextBidCents !== expectedCents) {
       return { clicked: false, reason: "state_changed" };
     }
     before.button.focus({ preventScroll: true });
-    before.button.click();
+    const activation = await activateBidButton(before.button);
+    if (!activation.completed) return { clicked: false, reason: "state_changed" };
     await delay(200);
     const visibleDialog = Array.from(document.querySelectorAll("[role='dialog'], dialog")).find(isVisible);
-    if (!visibleDialog) return { clicked: true, confirmed: true, confirmationRequired: false, before };
+    if (!visibleDialog) return { clicked: true, confirmed: true, confirmationRequired: false, activationSequence: activation.sequence, before };
     const confirmation = dialogConfirmation(expectedCents);
-    if (!confirmation) return { clicked: true, confirmed: false, confirmationRequired: true, before };
+    if (!confirmation) return { clicked: true, confirmed: false, confirmationRequired: true, activationSequence: activation.sequence, before };
     confirmation.focus({ preventScroll: true });
     confirmation.click();
-    return { clicked: true, confirmed: true, confirmationRequired: true, before };
+    return { clicked: true, confirmed: true, confirmationRequired: true, activationSequence: activation.sequence, before };
   }
 
-  async function verifyBid(auctionKey, expectedCents, previousCurrentCents) {
+  async function verifyBid(auctionKey) {
     const deadline = Date.now() + 3500;
     while (Date.now() < deadline) {
       await delay(175);
       const after = probe();
       if (after.auctionKey !== auctionKey) return { status: "auction_changed", snapshot: after };
       if (after.bidState === "winning") return { status: "accepted", snapshot: after };
+      if (after.bidConfirmed) return { status: "confirmed", snapshot: after };
       if (after.ended) return { status: "ended", snapshot: after };
-      const priceAdvanced = Number.isInteger(after.currentPriceCents) && after.currentPriceCents >= expectedCents && after.currentPriceCents !== previousCurrentCents;
-      const nextAdvanced = Number.isInteger(after.nextBidCents) && after.nextBidCents > expectedCents;
-      if (priceAdvanced || nextAdvanced) return { status: "observed", snapshot: after };
     }
     return { status: "uncertain", snapshot: probe() };
   }
@@ -292,6 +360,7 @@
         currentPriceCents: snapshot.currentPriceCents,
         nextBidCents: snapshot.nextBidCents,
         bidState: snapshot.bidState,
+        bidConfirmed: snapshot.bidConfirmed,
         auctionKey: snapshot.auctionKey,
         buttonText: snapshot.buttonText
       },

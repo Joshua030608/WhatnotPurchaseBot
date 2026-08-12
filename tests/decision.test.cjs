@@ -1,6 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { actions, evaluate, participationAfterAction, advanceParticipation } = require("../shared/decision.js");
+const {
+  actions,
+  evaluate,
+  participationAfterAction,
+  advanceParticipation,
+  advanceTestParticipation
+} = require("../shared/decision.js");
 
 function snapshot(overrides = {}) {
   return {
@@ -94,4 +100,38 @@ test("requires a stale outbid marker to clear before it can trigger again", () =
   const returned = advanceParticipation(cleared, "outbid");
   assert.equal(returned.waitingForOutbid, false);
   assert.equal(returned.freshOutbid, true);
+});
+
+test("test mode stays locked while the next bid is unchanged", () => {
+  const afterAction = participationAfterAction("outbid");
+  const unchanged = advanceTestParticipation(afterAction, 200, 200);
+  assert.equal(unchanged.waitingForOutbid, true);
+  assert.equal(unchanged.freshOutbid, false);
+});
+
+test("test mode treats a higher next bid as a simulated outbid", () => {
+  const afterAction = participationAfterAction("outbid");
+  const advanced = advanceTestParticipation(afterAction, 300, 200);
+  assert.equal(advanced.waitingForOutbid, false);
+  assert.equal(advanced.freshOutbid, true);
+  assert.equal(
+    evaluate(
+      snapshot({ nextBidCents: 300, bidState: "outbid" }),
+      settings({ maxBidCents: 500 }),
+      runtime({ hasBidThisAuction: advanced.waitingForOutbid, lastActionKey: "auction-1:200" })
+    ).action,
+    actions.SIMULATE
+  );
+});
+
+test("test mode still stops simulating above the maximum", () => {
+  const advanced = advanceTestParticipation(participationAfterAction("outbid"), 600, 500);
+  assert.equal(
+    evaluate(
+      snapshot({ nextBidCents: 600, bidState: "outbid" }),
+      settings({ maxBidCents: 500 }),
+      runtime({ hasBidThisAuction: advanced.waitingForOutbid, lastActionKey: "auction-1:500" })
+    ).reason,
+    "maximum_reached"
+  );
 });

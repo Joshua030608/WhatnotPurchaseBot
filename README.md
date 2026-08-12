@@ -10,6 +10,7 @@ The extension is intentionally fail-closed. Test mode is enabled by default, liv
 - Arms only the current browser tab.
 - Detects the visible current price, next valid bid, bid button, auction status, and winning/outbid state.
 - Clicks the normal Whatnot bid button only when the next valid bid is at or below the configured maximum.
+- Uses Whatnot's current `show-bid-button` press-and-release interaction instead of relying on a generic click.
 - Waits for a positive outbid signal before bidding again, preventing the extension from bidding against itself.
 - Supports bid confirmation dialogs when the exact amount can be verified.
 - Provides test mode, browser notifications, an in-page status panel, an emergency stop, diagnostics, and an activity log.
@@ -63,7 +64,7 @@ When source files change, return to `chrome://extensions`, press the extension's
 
 When a qualifying bid is detected, the extension records a `Would bid` event, displays a browser notification, and does not click the bid button. The page overlay shows the detected current price, next bid, maximum, and current decision.
 
-After a simulated bid, the bot waits until Whatnot explicitly shows that the user was outbid before producing another simulated bid for that auction. Starting a new auction resets that state.
+After a simulated bid, each externally increased next-bid amount produces another `Would bid` event until the next bid exceeds the maximum. Test mode never clicks the bid button, so it does not require Whatnot to show a real winning-to-outbid transition for the simulated bidder. Starting a new auction resets that state.
 
 ## Use live mode
 
@@ -75,7 +76,7 @@ Live mode can place binding bids that may result in a purchase.
 4. Recheck the maximum bid.
 5. Select **Start live bidding**.
 
-The extension re-reads the next bid immediately before clicking. If a supported confirmation dialog appears, it clicks the confirmation only when the displayed amount exactly matches the intended bid. It then watches the page for an accepted, advanced, ended, or uncertain result.
+The extension re-reads the next bid immediately before interacting with the button. If a supported confirmation dialog appears, it clicks the confirmation only when the displayed amount exactly matches the intended bid. It reports success only after Whatnot shows the user winning or displays an explicit bid confirmation. Price movement by another bidder is not treated as proof that the extension's bid succeeded.
 
 If the result is uncertain, the extension stops. It does not retry.
 
@@ -137,7 +138,7 @@ Test mode: notify        Live mode: click visible Bid control
           within maximum → bid again
 ```
 
-An increase in price alone is not treated as an outbid. This is deliberate: bidding again based only on a price change could make the bot bid against itself.
+In live mode, an increase in price alone is not treated as an outbid. This is deliberate: bidding again based only on a price change could make the bot bid against itself. In test mode, a higher visible next bid is treated as a simulated outbid because no bid was actually submitted.
 
 ## Activity and privacy
 
@@ -182,7 +183,7 @@ manifest.json         Chrome Manifest V3 configuration
 - A site can reject programmatic clicks or introduce an interaction that requires adapter changes.
 - Very fast sudden-death auctions are subject to page rendering, browser scheduling, and network latency.
 - Browser notifications depend on operating-system and Chrome notification settings.
-- The extension requires a positive outbid signal before a repeat bid. If Whatnot does not expose one, it will safely wait rather than infer from price alone.
+- Live mode requires a positive outbid signal before a repeat bid. If Whatnot does not expose one, it will safely wait rather than infer from price alone.
 - The bot operates only while the authorized Whatnot page is open in Chrome.
 
 For a controlled demonstration, keep the Whatnot tab in the foreground, use a dedicated approved test account and auction, begin in test mode, and keep the in-page Stop button visible.

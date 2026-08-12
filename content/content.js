@@ -24,6 +24,7 @@
     armedPath: null,
     pending: false,
     participation: { waitingForOutbid: false, seenNonOutbid: false, freshOutbid: false },
+    lastSimulatedBidCents: null,
     lastActionKey: null,
     rawAuctionKey: null,
     auctionEpoch: 0,
@@ -71,7 +72,9 @@
     overlay.querySelector(".wnpb-title").textContent = state.settings.testMode ? "Whatnot Bot · Test" : "Whatnot Bot · Live";
     overlay.querySelector(".wnpb-status").textContent = state.pending
       ? "Checking bid result"
-      : reasonLabels[state.decision.reason] || state.suspendedReason || "Monitoring";
+      : state.settings.testMode && state.decision.reason === "waiting_for_outbid"
+        ? "Waiting for the next bid amount"
+        : reasonLabels[state.decision.reason] || state.suspendedReason || "Monitoring";
     overlay.querySelector("[data-value='current']").textContent = money.formatCents(snapshot.currentPriceCents, symbol);
     overlay.querySelector("[data-value='next']").textContent = money.formatCents(snapshot.nextBidCents, symbol);
     overlay.querySelector("[data-value='maximum']").textContent = money.formatCents(state.settings.maxBidCents, symbol);
@@ -88,6 +91,7 @@
       nextBidCents: snapshot.nextBidCents,
       currencySymbol: snapshot.currencySymbol,
       bidState: snapshot.bidState,
+      bidConfirmed: snapshot.bidConfirmed,
       auctionKey: snapshot.auctionKey,
       title: snapshot.title,
       buttonText: snapshot.buttonText
@@ -145,6 +149,7 @@
     state.auctionEpoch += 1;
     state.auctionId = `${rawKey || "auction"}:${state.auctionEpoch}`;
     state.participation = { waitingForOutbid: false, seenNonOutbid: false, freshOutbid: false };
+    state.lastSimulatedBidCents = null;
     state.lastActionKey = null;
     state.pending = false;
   }
@@ -165,6 +170,17 @@
   }
 
   function updateParticipation(snapshot) {
+    if (state.settings.testMode) {
+      const testParticipation = decisionApi.advanceTestParticipation(
+        state.participation,
+        snapshot.nextBidCents,
+        state.lastSimulatedBidCents
+      );
+      if (testParticipation.freshOutbid) {
+        state.participation = testParticipation;
+        return;
+      }
+    }
     state.participation = decisionApi.advanceParticipation(state.participation, snapshot.bidState);
   }
 
@@ -209,6 +225,7 @@
     updateOverlay();
     if (decision.action === decisionApi.actions.SIMULATE) {
       state.participation = decisionApi.participationAfterAction(snapshot.bidState);
+      state.lastSimulatedBidCents = snapshot.nextBidCents;
       state.pending = false;
       recordEvent(
         "would_bid",
@@ -251,13 +268,9 @@
       );
       return;
     }
-    const verification = await adapter.verifyBid(
-      snapshot.auctionKey,
-      snapshot.nextBidCents,
-      snapshot.currentPriceCents
-    );
+    const verification = await adapter.verifyBid(snapshot.auctionKey);
     state.pending = false;
-    if (verification.status === "accepted" || verification.status === "observed") {
+    if (verification.status === "accepted" || verification.status === "confirmed") {
       recordEvent(
         "bid_submitted",
         `Bid submitted at ${money.formatCents(snapshot.nextBidCents, snapshot.currencySymbol)}`,
@@ -265,7 +278,8 @@
           auctionId: state.auctionId,
           title: snapshot.title,
           nextBidCents: snapshot.nextBidCents,
-          verification: verification.status
+          verification: verification.status,
+          activationSequence: clickResult.activationSequence
         },
         true
       );
@@ -276,7 +290,11 @@
     recordEvent(
       "error",
       "Bot stopped because the bid result could not be verified",
-      { verification: verification.status, nextBidCents: snapshot.nextBidCents },
+      {
+        verification: verification.status,
+        nextBidCents: snapshot.nextBidCents,
+        activationSequence: clickResult.activationSequence
+      },
       true
     );
   }

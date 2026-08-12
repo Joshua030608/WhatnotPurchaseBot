@@ -55,7 +55,9 @@
       next_bid_unknown: "The next bid amount could not be read",
       maximum_reached: "The next bid exceeds your maximum",
       already_winning: "You are currently winning",
-      waiting_for_outbid: "Waiting until Whatnot confirms you were outbid",
+      waiting_for_outbid: currentSettings.testMode
+        ? "Waiting for the next bid amount"
+        : "Waiting until Whatnot confirms you were outbid",
       action_pending: "Checking the result of the last action",
       duplicate_state: "This bid state was already handled",
       eligible: "The next bid is within your maximum"

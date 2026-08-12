@@ -18,6 +18,8 @@
   let currentCents = 1000;
   let nextCents = 1100;
   let lot = 1;
+  let stagedBidCents = null;
+  let confirmationBidCents = null;
 
   function format(cents) {
     return money.formatCents(cents, "$");
@@ -37,9 +39,9 @@
     log.prepend(entry);
   }
 
-  function acceptBid() {
-    currentCents = nextCents;
-    nextCents += money.parseCents(incrementInput.value) || 100;
+  function acceptBid(bidCents) {
+    currentCents = bidCents;
+    nextCents = bidCents + (money.parseCents(incrementInput.value) || 100);
     auction.dataset.wnpbBidState = "winning";
     bidStatus.textContent = "You're currently winning";
     renderAuction();
@@ -56,19 +58,29 @@
     });
   }
 
-  bidButton.addEventListener("click", () => {
+  bidButton.addEventListener("mousedown", () => {
+    stagedBidCents = nextCents;
+  });
+
+  document.addEventListener("mouseup", (event) => {
+    const bidCents = stagedBidCents;
+    stagedBidCents = null;
+    if (!Number.isInteger(bidCents) || !bidButton.contains(event.target)) return;
     if (confirmationInput.checked) {
-      confirmAmount.textContent = format(nextCents);
-      confirmBid.textContent = `Confirm bid ${format(nextCents)}`;
+      confirmationBidCents = bidCents;
+      confirmAmount.textContent = format(bidCents);
+      confirmBid.textContent = `Confirm bid ${format(bidCents)}`;
       confirmDialog.showModal();
       return;
     }
-    acceptBid();
+    acceptBid(bidCents);
   });
 
   confirmBid.addEventListener("click", () => {
+    const bidCents = confirmationBidCents;
+    confirmationBidCents = null;
     confirmDialog.close();
-    acceptBid();
+    if (Number.isInteger(bidCents)) acceptBid(bidCents);
   });
 
   document.getElementById("simArm").addEventListener("click", async () => {
@@ -97,6 +109,8 @@
     lot += 1;
     currentCents = 1000;
     nextCents = currentCents + (money.parseCents(incrementInput.value) || 100);
+    stagedBidCents = null;
+    confirmationBidCents = null;
     auction.dataset.auctionId = `sim-${lot}`;
     auction.dataset.wnpbBidState = "neutral";
     auction.dataset.wnpbEnded = "false";

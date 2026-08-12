@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Whatnot Purchase Bot",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "A permissioned Whatnot UI bidding demonstration with a safe test mode.",
   "permissions": [
     "notifications",
@@ -40,6 +40,7 @@
         "shared/money.js",
         "shared/settings.js",
         "shared/decision.js",
+        "shared/interaction.js",
         "content/whatnot-adapter.js",
         "content/content.js"
       ],
