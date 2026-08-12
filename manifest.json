@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Whatnot Purchase Bot",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "description": "A permissioned Whatnot UI bidding demonstration with a safe test mode.",
   "permissions": [
     "notifications",

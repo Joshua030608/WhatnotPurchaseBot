@@ -9,11 +9,14 @@
     auction_not_detected: "Waiting for an auction",
     auction_ended: "Auction ended",
     auction_inactive: "Waiting for an active auction",
+    auction_start_delay: "Waiting 2 seconds after auction start",
     bid_unavailable: "Bid control unavailable",
     next_bid_unknown: "Next bid could not be verified",
     maximum_reached: "Next bid exceeds your maximum",
     already_winning: "You are currently winning",
     waiting_for_outbid: "Waiting for a confirmed outbid",
+    outbid_rebid_delay: "Waiting 0.25 seconds after being outbid",
+    bid_state_unknown: "Cannot verify who is winning",
     action_pending: "Checking bid result",
     duplicate_state: "Already handled this bid state",
     eligible: "Eligible to bid"
@@ -29,6 +32,8 @@
     rawAuctionKey: null,
     auctionEpoch: 0,
     auctionId: null,
+    auctionStartedAt: 0,
+    outbidDetectedAt: null,
     previousSnapshot: null,
     snapshot: null,
     decision: { action: "wait", reason: "disarmed" },
@@ -148,6 +153,8 @@
     state.rawAuctionKey = rawKey;
     state.auctionEpoch += 1;
     state.auctionId = `${rawKey || "auction"}:${state.auctionEpoch}`;
+    state.auctionStartedAt = Date.now();
+    state.outbidDetectedAt = null;
     state.participation = { waitingForOutbid: false, seenNonOutbid: false, freshOutbid: false };
     state.lastSimulatedBidCents = null;
     state.lastActionKey = null;
@@ -178,10 +185,12 @@
       );
       if (testParticipation.freshOutbid) {
         state.participation = testParticipation;
+        state.outbidDetectedAt = Date.now();
         return;
       }
     }
     state.participation = decisionApi.advanceParticipation(state.participation, snapshot.bidState);
+    if (state.participation.freshOutbid) state.outbidDetectedAt = Date.now();
   }
 
   function arm() {
@@ -225,6 +234,7 @@
     updateOverlay();
     if (decision.action === decisionApi.actions.SIMULATE) {
       state.participation = decisionApi.participationAfterAction(snapshot.bidState);
+      state.outbidDetectedAt = null;
       state.lastSimulatedBidCents = snapshot.nextBidCents;
       state.pending = false;
       recordEvent(
@@ -248,7 +258,15 @@
       scheduleEvaluation(0);
       return;
     }
-    const clickResult = await adapter.clickBid(snapshot.nextBidCents);
+    const clickResult = await adapter.clickBid(
+      snapshot.auctionKey,
+      snapshot.nextBidCents,
+      () => state.armed
+        && state.armedPath === location.pathname
+        && !state.settings.testMode
+        && Number.isInteger(state.settings.maxBidCents)
+        && snapshot.nextBidCents <= state.settings.maxBidCents
+    );
     if (!clickResult.clicked) {
       state.pending = false;
       state.lastActionKey = null;
@@ -257,8 +275,15 @@
       return;
     }
     state.participation = decisionApi.participationAfterAction(snapshot.bidState);
+    state.outbidDetectedAt = null;
     if (clickResult.confirmationRequired && !clickResult.confirmed) {
       state.pending = false;
+      if (clickResult.reason === "state_changed") {
+        state.lastActionKey = null;
+        disarm("Settings or page changed before confirmation", false);
+        recordEvent("state_changed", "Bid confirmation was cancelled because the bot state changed", {}, false);
+        return;
+      }
       disarm("Confirmation amount could not be verified", false);
       recordEvent(
         "error",
@@ -268,12 +293,54 @@
       );
       return;
     }
-    const verification = await adapter.verifyBid(snapshot.auctionKey);
+    const verification = await adapter.verifyBid(
+      snapshot.auctionKey,
+      snapshot.nextBidCents,
+      snapshot.currentPriceCents
+    );
     state.pending = false;
     if (verification.status === "accepted" || verification.status === "confirmed") {
+      state.participation = decisionApi.participationAfterAction(verification.snapshot.bidState);
       recordEvent(
         "bid_submitted",
         `Bid submitted at ${money.formatCents(snapshot.nextBidCents, snapshot.currencySymbol)}`,
+        {
+          auctionId: state.auctionId,
+          title: snapshot.title,
+          nextBidCents: snapshot.nextBidCents,
+          verification: verification.status,
+          activationSequence: clickResult.activationSequence
+        },
+        true
+      );
+      scheduleEvaluation(0);
+      return;
+    }
+    if (verification.status === "overtaken") {
+      state.participation = { waitingForOutbid: false, seenNonOutbid: false, freshOutbid: true };
+      state.outbidDetectedAt = Date.now();
+      recordEvent(
+        "bid_overtaken",
+        `Bid attempt at ${money.formatCents(snapshot.nextBidCents, snapshot.currencySymbol)} was overtaken`,
+        {
+          auctionId: state.auctionId,
+          title: snapshot.title,
+          nextBidCents: snapshot.nextBidCents,
+          observedCurrentPriceCents: verification.snapshot.currentPriceCents,
+          observedNextBidCents: verification.snapshot.nextBidCents,
+          activationSequence: clickResult.activationSequence
+        },
+        false
+      );
+      scheduleEvaluation(0);
+      return;
+    }
+    if (verification.status === "ended" || verification.status === "auction_changed") {
+      recordEvent(
+        "bid_unverified",
+        verification.status === "ended"
+          ? `Auction ended before the ${money.formatCents(snapshot.nextBidCents, snapshot.currencySymbol)} bid result was confirmed`
+          : `Auction changed before the ${money.formatCents(snapshot.nextBidCents, snapshot.currencySymbol)} bid result was confirmed`,
         {
           auctionId: state.auctionId,
           title: snapshot.title,
@@ -315,11 +382,20 @@
         pending: state.pending,
         hasBidThisAuction: state.participation.waitingForOutbid,
         lastActionKey: state.lastActionKey,
-        auctionId: state.auctionId || snapshot.auctionKey
+        auctionId: state.auctionId || snapshot.auctionKey,
+        auctionAgeMs: Date.now() - state.auctionStartedAt,
+        outbidAgeMs: Number.isInteger(state.outbidDetectedAt)
+          ? Date.now() - state.outbidDetectedAt
+          : Infinity
       };
       state.decision = decisionApi.evaluate(snapshot, state.settings, runtime);
       updateOverlay();
       state.previousSnapshot = publicSnapshot(snapshot);
+      if (state.decision.reason === "auction_start_delay") {
+        scheduleEvaluation(Math.max(1, decisionApi.auctionStartDelayMs - runtime.auctionAgeMs));
+      } else if (state.decision.reason === "outbid_rebid_delay") {
+        scheduleEvaluation(Math.max(1, decisionApi.outbidRebidDelayMs - runtime.outbidAgeMs));
+      }
       if (!state.pending && [decisionApi.actions.SIMULATE, decisionApi.actions.BID].includes(state.decision.action)) {
         await executeDecision(state.decision, snapshot);
       } else if (state.decision.action === decisionApi.actions.STOP) {
@@ -363,9 +439,11 @@
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     const previousMode = state.settings.testMode;
+    const previousMaximum = state.settings.maxBidCents;
     settingsApi.load().then((settings) => {
       state.settings = settings;
       if (state.armed && previousMode !== settings.testMode) disarm("Mode changed; arm the bot again", true);
+      else if (state.armed && previousMaximum !== settings.maxBidCents) disarm("Maximum changed; arm the bot again", true);
       scheduleEvaluation(0);
     });
   });

@@ -9,6 +9,8 @@ The extension is intentionally fail-closed. Test mode is enabled by default, liv
 - Lets the user enter a maximum bid in the auction's displayed currency.
 - Arms only the current browser tab.
 - Detects the visible current price, next valid bid, bid button, auction status, and winning/outbid state.
+- Waits at least 2 seconds after detecting the start of each auction before acting.
+- Waits at least 0.25 seconds after detecting an outbid before bidding again.
 - Clicks the normal Whatnot bid button only when the next valid bid is at or below the configured maximum.
 - Uses Whatnot's current `show-bid-button` press-and-release interaction instead of relying on a generic click.
 - Waits for a positive outbid signal before bidding again, preventing the extension from bidding against itself.
@@ -23,14 +25,17 @@ The extension will not bid when any of these conditions apply:
 - The current tab has not been explicitly armed.
 - The maximum is missing or invalid.
 - The active auction or visible bid control cannot be identified.
+- Fewer than 2 seconds have elapsed since the auction was detected.
+- Fewer than 0.25 seconds have elapsed since a confirmed outbid.
 - The next valid bid cannot be read from the page.
 - The next valid bid is greater than the maximum.
 - Whatnot indicates that the user is already winning.
+- The visible winner cannot be safely matched to the logged-in user.
 - The extension has bid during the current auction and Whatnot has not positively indicated that the user was outbid.
 - A confirmation dialog appears but its amount cannot be matched to the intended bid.
 - The outcome of a UI click cannot be verified.
 
-Changing between test and live mode, reloading the page, or navigating to another page requires the bot to be armed again. The in-page panel provides a Stop button while the bot is armed.
+Changing the maximum, changing between test and live mode, reloading the page, or navigating to another page requires the bot to be armed again. The in-page panel provides a Stop button while the bot is armed. A state change during the bid-button press cancels the staged interaction before release.
 
 The maximum applies only to the visible auction bid. Shipping, taxes, duties, and other charges are not included.
 
@@ -41,12 +46,7 @@ No build step or package installation is required.
 1. Open `chrome://extensions` in Chrome.
 2. Turn on **Developer mode**.
 3. Select **Load unpacked**.
-4. Choose this repository folder:
-
-   ```text
-   /Users/joshuaford/Documents/Dev/WebDev/WhatnotPurchaseBot
-   ```
-
+4. Choose the cloned repository folder—the folder that contains `manifest.json`.
 5. Pin **Whatnot Purchase Bot** to the Chrome toolbar.
 6. Reload any Whatnot tabs that were already open when the extension was installed.
 
@@ -76,9 +76,9 @@ Live mode can place binding bids that may result in a purchase.
 4. Recheck the maximum bid.
 5. Select **Start live bidding**.
 
-The extension re-reads the next bid immediately before interacting with the button. If a supported confirmation dialog appears, it clicks the confirmation only when the displayed amount exactly matches the intended bid. It reports success only after Whatnot shows the user winning or displays an explicit bid confirmation. Price movement by another bidder is not treated as proof that the extension's bid succeeded.
+The extension re-reads the next bid immediately before interacting with the button. If a supported confirmation dialog appears, it clicks the confirmation only when the displayed amount exactly matches the intended bid. It reports success only after Whatnot shows the user winning or displays an explicit bid confirmation. If Whatnot positively shows another bidder winning after the visible price crosses the attempted amount, the attempt is treated as overtaken and the bot evaluates the new next bid instead of stopping. Ambiguous or unchanged states still stop the bot.
 
-If the result is uncertain, the extension stops. It does not retry.
+If an active auction remains ambiguous, the extension stops and does not retry that bid. If the auction ends or changes before confirmation appears, it records an unverified result and waits for the next auction instead of retrying the completed auction.
 
 ## Use the simulator
 

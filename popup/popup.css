@@ -1,7 +1,11 @@
 :root {
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0d1017;
+  min-width: 360px;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 78% -12%, rgba(113, 82, 255, 0.25), transparent 38%),
+    #0d1017;
   color: #f6f7fb;
 }
 
@@ -10,12 +14,12 @@
 }
 
 body {
-  width: 380px;
-  min-height: 530px;
+  width: 100%;
+  min-width: 360px;
+  min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 90% -10%, rgba(113, 82, 255, 0.24), transparent 35%),
-    #0d1017;
+  overflow-x: hidden;
+  background: transparent;
 }
 
 button,
@@ -24,20 +28,23 @@ input {
 }
 
 .shell {
-  padding: 18px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 14px;
 }
 
 .header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .mark {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   border-radius: 12px;
   background: linear-gradient(145deg, #7658ff, #4d35d5);
@@ -88,12 +95,12 @@ h1 {
 }
 
 .setup-panel {
-  padding: 14px;
+  padding: 12px;
 }
 
 .field-label {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
   color: #d9dce5;
   font-size: 12px;
   font-weight: 700;
@@ -102,7 +109,7 @@ h1 {
 .money-input {
   display: flex;
   align-items: center;
-  height: 44px;
+  height: 42px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   background: #11151e;
@@ -138,7 +145,7 @@ h1 {
 }
 
 .hint {
-  margin: 7px 1px 12px;
+  margin: 7px 1px 9px;
   color: #747c90;
   font-size: 10px;
   line-height: 1.4;
@@ -148,7 +155,7 @@ h1 {
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 47px;
+  min-height: 43px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   cursor: pointer;
 }
@@ -203,9 +210,14 @@ h1 {
   transform: translateX(15px);
 }
 
+.toggle-row input:focus-visible + .toggle {
+  outline: 2px solid #9b88ff;
+  outline-offset: 2px;
+}
+
 .status-panel {
-  margin-top: 11px;
-  padding: 12px;
+  margin-top: 10px;
+  padding: 11px;
 }
 
 .status-heading {
@@ -261,7 +273,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  margin-top: 11px;
+  margin-top: 10px;
 }
 
 .metrics div {
@@ -299,8 +311,8 @@ h1 {
 
 .primary {
   width: 100%;
-  height: 43px;
-  margin-top: 11px;
+  height: 42px;
+  margin-top: 10px;
   border: 0;
   border-radius: 11px;
   background: linear-gradient(135deg, #795cff, #5d42de);
@@ -323,11 +335,22 @@ h1 {
   opacity: 0.55;
 }
 
+.primary:not(:disabled):hover {
+  filter: brightness(1.07);
+}
+
+.primary:focus-visible,
+.text-button:focus-visible,
+.clear-button:focus-visible {
+  outline: 2px solid #9b88ff;
+  outline-offset: 2px;
+}
+
 .utility-row {
   display: flex;
   justify-content: center;
   gap: 18px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .text-button,
@@ -341,7 +364,7 @@ h1 {
 }
 
 .activity {
-  margin-top: 15px;
+  margin-top: 12px;
 }
 
 .activity-head {
@@ -358,9 +381,11 @@ h1 {
 }
 
 .event-list {
-  max-height: 112px;
+  max-height: 76px;
   margin-top: 7px;
   overflow: auto;
+  scrollbar-color: #3c4252 transparent;
+  scrollbar-width: thin;
 }
 
 .event,
@@ -382,4 +407,29 @@ h1 {
   display: block;
   margin-top: 2px;
   color: #697185;
+}
+
+@media (min-width: 620px) {
+  .shell {
+    padding: 18px 22px;
+  }
+
+  .header {
+    margin-bottom: 14px;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    align-items: start;
+    gap: 14px;
+  }
+
+  .status-panel {
+    margin-top: 0;
+  }
+
+  .event-list {
+    max-height: 160px;
+  }
 }

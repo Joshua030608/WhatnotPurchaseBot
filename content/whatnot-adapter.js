@@ -89,7 +89,9 @@
   }
 
   function findAuctionRoot(button) {
-    if (!button) return document.body;
+    if (!button) {
+      return queryVisible(document, "section[class*='LivePlayer_livePlayer__'], [data-wnpb-auction]") || document.body;
+    }
     const livePlayer = button.closest("section[class*='LivePlayer_livePlayer__']");
     if (livePlayer) return livePlayer;
     const explicit = button.closest("[data-wnpb-auction], [data-testid*='auction' i], [data-testid*='live-item' i]");
@@ -153,8 +155,21 @@
   }
 
   function readViewerUsername() {
-    const avatar = document.querySelector("#team-invite-profile-menu-anchor img[alt]");
-    return cleanText(avatar && avatar.getAttribute("alt")).toLowerCase();
+    const selectors = [
+      "#team-invite-profile-menu-anchor img[alt]",
+      "[data-testid*='profile-menu' i] img[alt]",
+      "[aria-label*='profile' i] img[alt]",
+      "header button img[alt]",
+      "[role='banner'] button img[alt]"
+    ];
+    const ignored = new Set(["activity", "inbox", "notifications", "referrals", "search", "wallet"]);
+    for (const selector of selectors) {
+      for (const image of document.querySelectorAll(selector)) {
+        const username = cleanText(image.getAttribute("alt")).toLowerCase();
+        if (/^[a-z0-9_.-]{2,64}$/.test(username) && !ignored.has(username)) return username;
+      }
+    }
+    return "";
   }
 
   function readBidState(auctionRoot) {
@@ -175,12 +190,13 @@
       }
     }
     const text = cleanText(texts.join(" "));
-    if (/you(?:'ve| have)?\s+been\s+outbid|you(?:'re| are)\s+outbid|\boutbid\b/i.test(text)) return "outbid";
     if (/you(?:'re| are)\s+(?:currently\s+)?winning|you(?:'re| are)\s+(?:the\s+)?highest\s+bidder/i.test(text)) return "winning";
+    if (/you(?:'ve| have)?\s+been\s+outbid|you(?:'re| are)\s+outbid/i.test(text)) return "outbid";
     const winnerMatch = cleanText(auctionRoot.innerText).match(/(?:^|\s)([a-z0-9_.-]+)\s+is\s+Winning!/i);
     if (winnerMatch) {
       const viewer = readViewerUsername();
-      return viewer && winnerMatch[1].toLowerCase() === viewer ? "winning" : "outbid";
+      if (!viewer) return "unknown";
+      return winnerMatch[1].toLowerCase() === viewer ? "winning" : "outbid";
     }
     return "neutral";
   }
@@ -229,7 +245,7 @@
     const nextBid = button ? readNextBid(button, auctionRoot) : null;
     const currentPrice = readCurrentPrice(auctionRoot, nextBid);
     const rootText = cleanText(auctionRoot.innerText).slice(0, 8000);
-    const ended = auctionRoot.getAttribute("data-wnpb-ended") === "true" || /\b(auction\s+ended|auction\s+closed|item\s+sold|sold\s+to)\b/i.test(rootText);
+    const ended = auctionRoot.getAttribute("data-wnpb-ended") === "true" || /\b(auction\s+ended|auction\s+closed|item\s+sold|sold\s+to|awaiting\s+next\s+item)\b/i.test(rootText);
     const title = readTitle(auctionRoot);
     const bidState = readBidState(auctionRoot);
     const bidConfirmed = readBidConfirmation(auctionRoot);
@@ -273,9 +289,31 @@
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 
-  async function activateBidButton(button) {
+  function releaseMouse(target, rect) {
+    target.dispatchEvent(new MouseEvent("mouseup", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+      button: 0,
+      buttons: 0,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2
+    }));
+  }
+
+  function continuationAllowed(canContinue) {
+    try {
+      return typeof canContinue !== "function" || canContinue();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function activateBidButton(button, expectedAuctionKey, expectedCents, canContinue) {
     const sequence = interaction.activationSequence(button.getAttribute("data-testid"));
     if (sequence.length === 1 && sequence[0] === "click") {
+      if (!continuationAllowed(canContinue)) return { completed: false, sequence };
       HTMLButtonElement.prototype.click.call(button);
       return { completed: true, sequence };
     }
@@ -290,32 +328,40 @@
       clientX: rect.left + rect.width / 2,
       clientY: rect.top + rect.height / 2
     }));
-    await delay(40);
-    if (!button.isConnected) return { completed: false, sequence: ["mousedown"] };
-    button.dispatchEvent(new MouseEvent("mouseup", {
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-      view: window,
-      button: 0,
-      buttons: 0,
-      clientX: rect.left + rect.width / 2,
-      clientY: rect.top + rect.height / 2
-    }));
+    await delay(interaction.pressDurationMs);
+    const current = probe();
+    const canRelease = button.isConnected
+      && current.button === button
+      && interaction.canReleaseBid(
+        current,
+        expectedAuctionKey,
+        expectedCents,
+        continuationAllowed(canContinue)
+      );
+    releaseMouse(canRelease ? button : document, rect);
+    if (!canRelease) return { completed: false, sequence };
     return { completed: true, sequence };
   }
 
-  async function clickBid(expectedCents) {
+  async function clickBid(expectedAuctionKey, expectedCents, canContinue) {
     const before = probe();
-    if (!before.supported || !before.bidButtonAvailable || before.nextBidCents !== expectedCents) {
+    if (!interaction.canReleaseBid(
+      before,
+      expectedAuctionKey,
+      expectedCents,
+      continuationAllowed(canContinue)
+    )) {
       return { clicked: false, reason: "state_changed" };
     }
     before.button.focus({ preventScroll: true });
-    const activation = await activateBidButton(before.button);
+    const activation = await activateBidButton(before.button, expectedAuctionKey, expectedCents, canContinue);
     if (!activation.completed) return { clicked: false, reason: "state_changed" };
     await delay(200);
     const visibleDialog = Array.from(document.querySelectorAll("[role='dialog'], dialog")).find(isVisible);
     if (!visibleDialog) return { clicked: true, confirmed: true, confirmationRequired: false, activationSequence: activation.sequence, before };
+    if (!continuationAllowed(canContinue)) {
+      return { clicked: true, confirmed: false, confirmationRequired: true, reason: "state_changed", activationSequence: activation.sequence, before };
+    }
     const confirmation = dialogConfirmation(expectedCents);
     if (!confirmation) return { clicked: true, confirmed: false, confirmationRequired: true, activationSequence: activation.sequence, before };
     confirmation.focus({ preventScroll: true });
@@ -323,17 +369,30 @@
     return { clicked: true, confirmed: true, confirmationRequired: true, activationSequence: activation.sequence, before };
   }
 
-  async function verifyBid(auctionKey) {
-    const deadline = Date.now() + 3500;
+  async function verifyBid(auctionKey, expectedCents, previousCurrentCents) {
+    const deadline = Date.now() + 5000;
+    let overtakenSince = null;
     while (Date.now() < deadline) {
-      await delay(175);
+      await delay(75);
       const after = probe();
       if (after.auctionKey !== auctionKey) return { status: "auction_changed", snapshot: after };
-      if (after.bidState === "winning") return { status: "accepted", snapshot: after };
-      if (after.bidConfirmed) return { status: "confirmed", snapshot: after };
-      if (after.ended) return { status: "ended", snapshot: after };
+      const observation = interaction.bidObservation(after, expectedCents, previousCurrentCents);
+      if (after.ended) return { status: observation || "ended", snapshot: after };
+      if (observation === "overtaken") {
+        overtakenSince = overtakenSince || Date.now();
+        if (Date.now() - overtakenSince >= interaction.overtakenStabilityMs) {
+          return { status: observation, snapshot: after };
+        }
+      } else {
+        overtakenSince = null;
+        if (observation) return { status: observation, snapshot: after };
+      }
     }
-    return { status: "uncertain", snapshot: probe() };
+    const snapshot = probe();
+    return {
+      status: interaction.bidObservation(snapshot, expectedCents, previousCurrentCents) || "uncertain",
+      snapshot
+    };
   }
 
   function diagnostics() {

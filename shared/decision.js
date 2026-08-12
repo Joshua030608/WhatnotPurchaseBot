@@ -9,6 +9,8 @@
     BID: "bid",
     STOP: "stop"
   });
+  const auctionStartDelayMs = 2000;
+  const outbidRebidDelayMs = 250;
 
   function result(action, reason) {
     return { action, reason };
@@ -22,12 +24,19 @@
     if (!snapshot.supported) return result(actions.WAIT, "auction_not_detected");
     if (snapshot.ended) return result(actions.WAIT, "auction_ended");
     if (!snapshot.active) return result(actions.WAIT, "auction_inactive");
+    if (Number.isFinite(runtime.auctionAgeMs) && runtime.auctionAgeMs < auctionStartDelayMs) {
+      return result(actions.WAIT, "auction_start_delay");
+    }
     if (!snapshot.bidButtonAvailable) return result(actions.WAIT, "bid_unavailable");
     if (!Number.isInteger(snapshot.nextBidCents)) return result(actions.WAIT, "next_bid_unknown");
     if (snapshot.nextBidCents > settings.maxBidCents) return result(actions.WAIT, "maximum_reached");
     if (snapshot.bidState === "winning") return result(actions.WAIT, "already_winning");
+    if (snapshot.bidState === "unknown") return result(actions.WAIT, "bid_state_unknown");
     if (runtime.hasBidThisAuction) {
       return result(actions.WAIT, "waiting_for_outbid");
+    }
+    if (Number.isFinite(runtime.outbidAgeMs) && runtime.outbidAgeMs < outbidRebidDelayMs) {
+      return result(actions.WAIT, "outbid_rebid_delay");
     }
     if (runtime.pending) return result(actions.WAIT, "action_pending");
     const key = `${runtime.auctionId}:${snapshot.nextBidCents}`;
@@ -68,5 +77,13 @@
     return { ...current, freshOutbid: false };
   }
 
-  return { actions, evaluate, participationAfterAction, advanceParticipation, advanceTestParticipation };
+  return {
+    actions,
+    auctionStartDelayMs,
+    outbidRebidDelayMs,
+    evaluate,
+    participationAfterAction,
+    advanceParticipation,
+    advanceTestParticipation
+  };
 });

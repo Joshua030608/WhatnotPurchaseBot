@@ -31,6 +31,8 @@ function runtime(overrides = {}) {
     hasBidThisAuction: false,
     lastActionKey: null,
     auctionId: "auction-1",
+    auctionAgeMs: 2000,
+    outbidAgeMs: Infinity,
     ...overrides
   };
 }
@@ -61,8 +63,22 @@ test("allows a bid equal to the configured maximum", () => {
   assert.equal(evaluate(snapshot({ nextBidCents: 2500 }), settings(), runtime()).action, actions.SIMULATE);
 });
 
+test("waits until two seconds after the auction is detected", () => {
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 1999 })).reason, "auction_start_delay");
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 2000 })).action, actions.SIMULATE);
+});
+
+test("waits 250 milliseconds after an outbid before bidding again", () => {
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 249 })).reason, "outbid_rebid_delay");
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 250 })).action, actions.SIMULATE);
+});
+
 test("does not bid while the user is winning", () => {
   assert.equal(evaluate(snapshot({ bidState: "winning" }), settings(), runtime()).reason, "already_winning");
+});
+
+test("does not bid when the visible winner cannot be matched to the user", () => {
+  assert.equal(evaluate(snapshot({ bidState: "unknown" }), settings(), runtime()).reason, "bid_state_unknown");
 });
 
 test("does not bid itself up without a confirmed outbid", () => {
