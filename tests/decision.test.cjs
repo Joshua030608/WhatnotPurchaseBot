@@ -3,6 +3,9 @@ const assert = require("node:assert/strict");
 const {
   actions,
   evaluate,
+  auctionStartDelayRangeMs,
+  outbidRebidDelayRangeMs,
+  randomDelayMs,
   participationAfterAction,
   advanceParticipation,
   advanceTestParticipation
@@ -32,7 +35,9 @@ function runtime(overrides = {}) {
     lastActionKey: null,
     auctionId: "auction-1",
     auctionAgeMs: 2000,
+    auctionStartDelayMs: 2000,
     outbidAgeMs: Infinity,
+    outbidRebidDelayMs: 1000,
     ...overrides
   };
 }
@@ -63,14 +68,34 @@ test("allows a bid equal to the configured maximum", () => {
   assert.equal(evaluate(snapshot({ nextBidCents: 2500 }), settings(), runtime()).action, actions.SIMULATE);
 });
 
-test("waits until two seconds after the auction is detected", () => {
-  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 1999 })).reason, "auction_start_delay");
-  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 2000 })).action, actions.SIMULATE);
+test("waits until the sampled auction-start delay has elapsed", () => {
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 4999, auctionStartDelayMs: 5000 })).reason, "auction_start_delay");
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 5000, auctionStartDelayMs: 5000 })).action, actions.SIMULATE);
 });
 
-test("waits 250 milliseconds after an outbid before bidding again", () => {
-  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 249 })).reason, "outbid_rebid_delay");
-  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 250 })).action, actions.SIMULATE);
+test("waits until the sampled outbid delay has elapsed", () => {
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 1999, outbidRebidDelayMs: 2000 })).reason, "outbid_rebid_delay");
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 2000, outbidRebidDelayMs: 2000 })).action, actions.SIMULATE);
+});
+
+test("samples inclusive delay values within the configured ranges", () => {
+  assert.deepEqual(auctionStartDelayRangeMs, { min: 2000, max: 7000 });
+  assert.deepEqual(outbidRebidDelayRangeMs, { min: 1000, max: 3000 });
+  assert.equal(randomDelayMs(auctionStartDelayRangeMs, () => 0), 2000);
+  assert.equal(randomDelayMs(auctionStartDelayRangeMs, () => 1), 7000);
+  assert.equal(randomDelayMs(outbidRebidDelayRangeMs, () => 0), 1000);
+  assert.equal(randomDelayMs(outbidRebidDelayRangeMs, () => 1), 3000);
+});
+
+test("clamps evaluated delays to their allowed ranges", () => {
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 1999, auctionStartDelayMs: 0 })).reason, "auction_start_delay");
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 2000, auctionStartDelayMs: 0 })).action, actions.SIMULATE);
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 6999, auctionStartDelayMs: 9000 })).reason, "auction_start_delay");
+  assert.equal(evaluate(snapshot(), settings(), runtime({ auctionAgeMs: 7000, auctionStartDelayMs: 9000 })).action, actions.SIMULATE);
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 999, outbidRebidDelayMs: 0 })).reason, "outbid_rebid_delay");
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 1000, outbidRebidDelayMs: 0 })).action, actions.SIMULATE);
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 2999, outbidRebidDelayMs: 9000 })).reason, "outbid_rebid_delay");
+  assert.equal(evaluate(snapshot({ bidState: "outbid" }), settings(), runtime({ outbidAgeMs: 3000, outbidRebidDelayMs: 9000 })).action, actions.SIMULATE);
 });
 
 test("does not bid while the user is winning", () => {

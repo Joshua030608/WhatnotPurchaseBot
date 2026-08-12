@@ -51,7 +51,7 @@
       auction_not_detected: "No compatible live auction detected",
       auction_ended: "The current auction has ended",
       auction_inactive: "Waiting for the next auction",
-      auction_start_delay: "Waiting 2 seconds after auction start",
+      auction_start_delay: "Waiting through the 2–7 second start delay",
       bid_unavailable: "The bid control is unavailable",
       next_bid_unknown: "The next bid amount could not be read",
       maximum_reached: "The next bid exceeds your maximum",
@@ -59,7 +59,7 @@
       waiting_for_outbid: currentSettings.testMode
         ? "Waiting for the next bid amount"
         : "Waiting until Whatnot confirms you were outbid",
-      outbid_rebid_delay: "Waiting 0.25 seconds after being outbid",
+      outbid_rebid_delay: "Waiting through the 1–3 second re-bid delay",
       bid_state_unknown: "Cannot verify who is winning",
       action_pending: "Checking the result of the last action",
       duplicate_state: "This bid state was already handled",

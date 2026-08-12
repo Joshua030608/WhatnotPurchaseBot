@@ -9,8 +9,19 @@
     BID: "bid",
     STOP: "stop"
   });
-  const auctionStartDelayMs = 2000;
-  const outbidRebidDelayMs = 250;
+  const auctionStartDelayRangeMs = Object.freeze({ min: 2000, max: 7000 });
+  const outbidRebidDelayRangeMs = Object.freeze({ min: 1000, max: 3000 });
+
+  function randomDelayMs(range, random = Math.random) {
+    const sample = Number(random());
+    const normalized = Number.isFinite(sample) ? Math.min(1, Math.max(0, sample)) : 0;
+    return Math.min(range.max, range.min + Math.floor(normalized * (range.max - range.min + 1)));
+  }
+
+  function boundedDelayMs(value, range) {
+    if (!Number.isFinite(value)) return range.max;
+    return Math.min(range.max, Math.max(range.min, Math.round(value)));
+  }
 
   function result(action, reason) {
     return { action, reason };
@@ -24,6 +35,7 @@
     if (!snapshot.supported) return result(actions.WAIT, "auction_not_detected");
     if (snapshot.ended) return result(actions.WAIT, "auction_ended");
     if (!snapshot.active) return result(actions.WAIT, "auction_inactive");
+    const auctionStartDelayMs = boundedDelayMs(runtime.auctionStartDelayMs, auctionStartDelayRangeMs);
     if (Number.isFinite(runtime.auctionAgeMs) && runtime.auctionAgeMs < auctionStartDelayMs) {
       return result(actions.WAIT, "auction_start_delay");
     }
@@ -35,6 +47,7 @@
     if (runtime.hasBidThisAuction) {
       return result(actions.WAIT, "waiting_for_outbid");
     }
+    const outbidRebidDelayMs = boundedDelayMs(runtime.outbidRebidDelayMs, outbidRebidDelayRangeMs);
     if (Number.isFinite(runtime.outbidAgeMs) && runtime.outbidAgeMs < outbidRebidDelayMs) {
       return result(actions.WAIT, "outbid_rebid_delay");
     }
@@ -79,8 +92,9 @@
 
   return {
     actions,
-    auctionStartDelayMs,
-    outbidRebidDelayMs,
+    auctionStartDelayRangeMs,
+    outbidRebidDelayRangeMs,
+    randomDelayMs,
     evaluate,
     participationAfterAction,
     advanceParticipation,

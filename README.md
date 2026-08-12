@@ -2,6 +2,8 @@
 
 A permissioned Chrome Manifest V3 demonstration that watches a Whatnot live auction and interacts with the visible bidding UI. It does not use Whatnot's native Max Bid feature and does not call a private purchase or bidding endpoint.
 
+Current release: **1.0.0**.
+
 The extension is intentionally fail-closed. Test mode is enabled by default, live bidding requires an explicit confirmation, and uncertain UI states stop the bot instead of retrying blindly.
 
 ## What it does
@@ -9,8 +11,8 @@ The extension is intentionally fail-closed. Test mode is enabled by default, liv
 - Lets the user enter a maximum bid in the auction's displayed currency.
 - Arms only the current browser tab.
 - Detects the visible current price, next valid bid, bid button, auction status, and winning/outbid state.
-- Waits at least 2 seconds after detecting the start of each auction before acting.
-- Waits at least 0.25 seconds after detecting an outbid before bidding again.
+- Chooses a new randomized 2–7 second delay after detecting the start of each auction.
+- Chooses a new randomized 1–3 second delay after detecting each outbid.
 - Clicks the normal Whatnot bid button only when the next valid bid is at or below the configured maximum.
 - Uses Whatnot's current `show-bid-button` press-and-release interaction instead of relying on a generic click.
 - Waits for a positive outbid signal before bidding again, preventing the extension from bidding against itself.
@@ -25,8 +27,8 @@ The extension will not bid when any of these conditions apply:
 - The current tab has not been explicitly armed.
 - The maximum is missing or invalid.
 - The active auction or visible bid control cannot be identified.
-- Fewer than 2 seconds have elapsed since the auction was detected.
-- Fewer than 0.25 seconds have elapsed since a confirmed outbid.
+- The randomized 2–7 second auction-start delay has not elapsed.
+- The randomized 1–3 second outbid delay has not elapsed.
 - The next valid bid cannot be read from the page.
 - The next valid bid is greater than the maximum.
 - Whatnot indicates that the user is already winning.
@@ -51,6 +53,20 @@ No build step or package installation is required.
 6. Reload any Whatnot tabs that were already open when the extension was installed.
 
 When source files change, return to `chrome://extensions`, press the extension's reload button, and reload the Whatnot tab.
+
+## Share with Whatnot or another approved tester
+
+For a controlled source review, send the reviewer either the GitHub repository link or a ZIP whose root contains `manifest.json`. The recipient should:
+
+1. Extract the ZIP into its own folder.
+2. Open `chrome://extensions`.
+3. Turn on **Developer mode**.
+4. Select **Load unpacked**.
+5. Select the extracted folder containing `manifest.json`.
+6. Reload any open Whatnot tabs.
+7. Begin with the packaged simulator, then use test mode on the approved Whatnot account and auction before enabling live mode.
+
+Treat direct ZIP installation as a trusted development or evaluation handoff. For recurring or broader distribution, publish through the Chrome Web Store. A **Private** listing can be limited to designated testers, while an **Unlisted** listing can be installed by anyone who has its URL. Both listing types go through Chrome Web Store review. See Chrome's official [distribution overview](https://developer.chrome.com/docs/extensions/how-to/distribute) and [visibility guidance](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution/).
 
 ## Use test mode on Whatnot
 

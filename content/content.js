@@ -9,13 +9,13 @@
     auction_not_detected: "Waiting for an auction",
     auction_ended: "Auction ended",
     auction_inactive: "Waiting for an active auction",
-    auction_start_delay: "Waiting 2 seconds after auction start",
+    auction_start_delay: "Waiting through the 2–7 second start delay",
     bid_unavailable: "Bid control unavailable",
     next_bid_unknown: "Next bid could not be verified",
     maximum_reached: "Next bid exceeds your maximum",
     already_winning: "You are currently winning",
     waiting_for_outbid: "Waiting for a confirmed outbid",
-    outbid_rebid_delay: "Waiting 0.25 seconds after being outbid",
+    outbid_rebid_delay: "Waiting through the 1–3 second re-bid delay",
     bid_state_unknown: "Cannot verify who is winning",
     action_pending: "Checking bid result",
     duplicate_state: "Already handled this bid state",
@@ -33,7 +33,9 @@
     auctionEpoch: 0,
     auctionId: null,
     auctionStartedAt: 0,
+    auctionStartDelayMs: null,
     outbidDetectedAt: null,
+    outbidRebidDelayMs: null,
     previousSnapshot: null,
     snapshot: null,
     decision: { action: "wait", reason: "disarmed" },
@@ -154,7 +156,9 @@
     state.auctionEpoch += 1;
     state.auctionId = `${rawKey || "auction"}:${state.auctionEpoch}`;
     state.auctionStartedAt = Date.now();
+    state.auctionStartDelayMs = decisionApi.randomDelayMs(decisionApi.auctionStartDelayRangeMs);
     state.outbidDetectedAt = null;
+    state.outbidRebidDelayMs = null;
     state.participation = { waitingForOutbid: false, seenNonOutbid: false, freshOutbid: false };
     state.lastSimulatedBidCents = null;
     state.lastActionKey = null;
@@ -176,6 +180,11 @@
     if (restarted || priceReset) resetAuction(snapshot.auctionKey);
   }
 
+  function markOutbidDetected() {
+    state.outbidDetectedAt = Date.now();
+    state.outbidRebidDelayMs = decisionApi.randomDelayMs(decisionApi.outbidRebidDelayRangeMs);
+  }
+
   function updateParticipation(snapshot) {
     if (state.settings.testMode) {
       const testParticipation = decisionApi.advanceTestParticipation(
@@ -185,12 +194,12 @@
       );
       if (testParticipation.freshOutbid) {
         state.participation = testParticipation;
-        state.outbidDetectedAt = Date.now();
+        markOutbidDetected();
         return;
       }
     }
     state.participation = decisionApi.advanceParticipation(state.participation, snapshot.bidState);
-    if (state.participation.freshOutbid) state.outbidDetectedAt = Date.now();
+    if (state.participation.freshOutbid) markOutbidDetected();
   }
 
   function arm() {
@@ -235,6 +244,7 @@
     if (decision.action === decisionApi.actions.SIMULATE) {
       state.participation = decisionApi.participationAfterAction(snapshot.bidState);
       state.outbidDetectedAt = null;
+      state.outbidRebidDelayMs = null;
       state.lastSimulatedBidCents = snapshot.nextBidCents;
       state.pending = false;
       recordEvent(
@@ -276,6 +286,7 @@
     }
     state.participation = decisionApi.participationAfterAction(snapshot.bidState);
     state.outbidDetectedAt = null;
+    state.outbidRebidDelayMs = null;
     if (clickResult.confirmationRequired && !clickResult.confirmed) {
       state.pending = false;
       if (clickResult.reason === "state_changed") {
@@ -318,7 +329,7 @@
     }
     if (verification.status === "overtaken") {
       state.participation = { waitingForOutbid: false, seenNonOutbid: false, freshOutbid: true };
-      state.outbidDetectedAt = Date.now();
+      markOutbidDetected();
       recordEvent(
         "bid_overtaken",
         `Bid attempt at ${money.formatCents(snapshot.nextBidCents, snapshot.currencySymbol)} was overtaken`,
@@ -384,17 +395,19 @@
         lastActionKey: state.lastActionKey,
         auctionId: state.auctionId || snapshot.auctionKey,
         auctionAgeMs: Date.now() - state.auctionStartedAt,
+        auctionStartDelayMs: state.auctionStartDelayMs,
         outbidAgeMs: Number.isInteger(state.outbidDetectedAt)
           ? Date.now() - state.outbidDetectedAt
-          : Infinity
+          : Infinity,
+        outbidRebidDelayMs: state.outbidRebidDelayMs
       };
       state.decision = decisionApi.evaluate(snapshot, state.settings, runtime);
       updateOverlay();
       state.previousSnapshot = publicSnapshot(snapshot);
       if (state.decision.reason === "auction_start_delay") {
-        scheduleEvaluation(Math.max(1, decisionApi.auctionStartDelayMs - runtime.auctionAgeMs));
+        scheduleEvaluation(Math.max(1, runtime.auctionStartDelayMs - runtime.auctionAgeMs));
       } else if (state.decision.reason === "outbid_rebid_delay") {
-        scheduleEvaluation(Math.max(1, decisionApi.outbidRebidDelayMs - runtime.outbidAgeMs));
+        scheduleEvaluation(Math.max(1, runtime.outbidRebidDelayMs - runtime.outbidAgeMs));
       }
       if (!state.pending && [decisionApi.actions.SIMULATE, decisionApi.actions.BID].includes(state.decision.action)) {
         await executeDecision(state.decision, snapshot);
