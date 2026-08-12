@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Whatnot Purchase Bot</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="header">
+        <div class="mark">W</div>
+        <div>
+          <h1>Whatnot Bot</h1>
+          <p>Direct UI bidding demo</p>
+        </div>
+        <span class="mode-pill" id="modePill">TEST</span>
+      </header>
+
+      <section class="panel setup-panel">
+        <label class="field-label" for="maxBid">Maximum bid</label>
+        <div class="money-input">
+          <span id="currencyPrefix">$</span>
+          <input id="maxBid" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="25.00" autocomplete="off">
+        </div>
+        <p class="hint">Uses the auction’s displayed currency. Shipping and tax are not included.</p>
+
+        <label class="toggle-row" for="testMode">
+          <span>
+            <strong>Test mode</strong>
+            <small>Notify without clicking Bid</small>
+          </span>
+          <input id="testMode" type="checkbox" checked>
+          <span class="toggle"></span>
+        </label>
+
+        <label class="toggle-row" for="notifications">
+          <span>
+            <strong>Notifications</strong>
+            <small>Show action alerts</small>
+          </span>
+          <input id="notifications" type="checkbox" checked>
+          <span class="toggle"></span>
+        </label>
+      </section>
+
+      <section class="panel status-panel">
+        <div class="status-heading">
+          <span class="status-dot" id="statusDot"></span>
+          <div>
+            <strong id="statusTitle">Connecting…</strong>
+            <small id="statusText">Checking the current tab</small>
+          </div>
+        </div>
+        <div class="metrics">
+          <div><span>Current</span><strong id="currentPrice">—</strong></div>
+          <div><span>Next</span><strong id="nextBid">—</strong></div>
+          <div><span>Maximum</span><strong id="maximumDisplay">—</strong></div>
+        </div>
+      </section>
+
+      <p class="error" id="error" role="alert" hidden></p>
+      <button class="primary" id="armButton" type="button">Start test mode</button>
+
+      <div class="utility-row">
+        <button class="text-button" id="simulatorButton" type="button">Open simulator</button>
+        <button class="text-button" id="diagnosticsButton" type="button">Copy diagnostics</button>
+      </div>
+
+      <section class="activity">
+        <div class="activity-head">
+          <h2>Recent activity</h2>
+          <button class="clear-button" id="clearLogButton" type="button">Clear</button>
+        </div>
+        <div class="event-list" id="eventList">
+          <p class="empty">No actions yet.</p>
+        </div>
+      </section>
+    </main>
+    <script src="../shared/money.js"></script>
+    <script src="../shared/settings.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

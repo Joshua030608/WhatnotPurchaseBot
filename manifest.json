@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Whatnot Purchase Bot",
+  "version": "0.1.0",
+  "description": "A permissioned Whatnot UI bidding demonstration with a safe test mode.",
+  "permissions": [
+    "notifications",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://whatnot.com/*",
+    "https://www.whatnot.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_title": "Whatnot Purchase Bot",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://whatnot.com/*",
+        "https://www.whatnot.com/*"
+      ],
+      "js": [
+        "shared/money.js",
+        "shared/settings.js",
+        "shared/decision.js",
+        "content/whatnot-adapter.js",
+        "content/content.js"
+      ],
+      "css": [
+        "content/overlay.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

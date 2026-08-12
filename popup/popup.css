@@ -1,0 +1,385 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0d1017;
+  color: #f6f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 380px;
+  min-height: 530px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 90% -10%, rgba(113, 82, 255, 0.24), transparent 35%),
+    #0d1017;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.shell {
+  padding: 18px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #7658ff, #4d35d5);
+  box-shadow: 0 8px 24px rgba(86, 59, 220, 0.34);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.header p {
+  margin-top: 2px;
+  color: #8f96a8;
+  font-size: 11px;
+}
+
+.mode-pill {
+  margin-left: auto;
+  border: 1px solid rgba(255, 201, 95, 0.36);
+  border-radius: 999px;
+  background: rgba(255, 201, 95, 0.11);
+  color: #ffd47f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 7px;
+}
+
+.mode-pill.live {
+  border-color: rgba(94, 233, 138, 0.4);
+  background: rgba(94, 233, 138, 0.1);
+  color: #7bf09f;
+}
+
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.setup-panel {
+  padding: 14px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #d9dce5;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: #11151e;
+  padding: 0 12px;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.money-input:focus-within {
+  border-color: #7658ff;
+  box-shadow: 0 0 0 3px rgba(118, 88, 255, 0.15);
+}
+
+.money-input span {
+  color: #8f96a8;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.money-input input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 750;
+  padding: 0 5px;
+}
+
+.money-input input::-webkit-inner-spin-button {
+  appearance: none;
+}
+
+.hint {
+  margin: 7px 1px 12px;
+  color: #747c90;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.toggle-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 47px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+}
+
+.toggle-row > span:first-child {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.toggle-row strong {
+  font-size: 12px;
+}
+
+.toggle-row small {
+  margin-top: 2px;
+  color: #7f8799;
+  font-size: 10px;
+}
+
+.toggle-row input {
+  position: absolute;
+  opacity: 0;
+}
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 21px;
+  border-radius: 999px;
+  background: #2a303d;
+  transition: background 150ms;
+}
+
+.toggle::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #ffffff;
+  content: "";
+  transition: transform 150ms;
+}
+
+.toggle-row input:checked + .toggle {
+  background: #6c50ed;
+}
+
+.toggle-row input:checked + .toggle::after {
+  transform: translateX(15px);
+}
+
+.status-panel {
+  margin-top: 11px;
+  padding: 12px;
+}
+
+.status-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.status-heading > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.status-heading strong {
+  font-size: 12px;
+}
+
+.status-heading small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #858da0;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #5e6678;
+  box-shadow: 0 0 0 4px rgba(94, 102, 120, 0.12);
+}
+
+.status-dot.ready {
+  background: #63d88b;
+  box-shadow: 0 0 0 4px rgba(99, 216, 139, 0.12);
+}
+
+.status-dot.armed {
+  background: #ffcb65;
+  box-shadow: 0 0 0 4px rgba(255, 203, 101, 0.12);
+}
+
+.status-dot.live {
+  background: #5ee98a;
+  box-shadow: 0 0 0 4px rgba(94, 233, 138, 0.14);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.metrics div {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 7px;
+}
+
+.metrics span,
+.metrics strong {
+  display: block;
+}
+
+.metrics span {
+  color: #757d8f;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.metrics strong {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  margin: 9px 2px 0;
+  color: #ff929d;
+  font-size: 11px;
+}
+
+.primary {
+  width: 100%;
+  height: 43px;
+  margin-top: 11px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #795cff, #5d42de);
+  box-shadow: 0 10px 24px rgba(87, 61, 215, 0.26);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.primary.stop {
+  border: 1px solid rgba(255, 105, 118, 0.38);
+  background: rgba(255, 105, 118, 0.12);
+  box-shadow: none;
+  color: #ff9aa3;
+}
+
+.primary:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.utility-row {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.text-button,
+.clear-button {
+  border: 0;
+  background: transparent;
+  color: #8e83d7;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 3px;
+}
+
+.activity {
+  margin-top: 15px;
+}
+
+.activity-head {
+  display: flex;
+  align-items: center;
+}
+
+.activity h2 {
+  flex: 1;
+  color: #b8bdca;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.event-list {
+  max-height: 112px;
+  margin-top: 7px;
+  overflow: auto;
+}
+
+.event,
+.empty {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #8b93a5;
+  font-size: 10px;
+  padding: 7px 1px;
+}
+
+.event strong {
+  display: block;
+  color: #ced2dc;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.event span {
+  display: block;
+  margin-top: 2px;
+  color: #697185;
+}

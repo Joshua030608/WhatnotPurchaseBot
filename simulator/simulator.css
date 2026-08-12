@@ -1,0 +1,366 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b0e14;
+  color: #f4f5f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(113, 82, 255, 0.2), transparent 27%),
+    radial-gradient(circle at 100% 50%, rgba(46, 195, 125, 0.12), transparent 30%),
+    #0b0e14;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.layout {
+  width: min(1050px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 50px 0 70px;
+}
+
+.intro {
+  max-width: 650px;
+  margin-bottom: 25px;
+}
+
+.eyebrow {
+  color: #8f7cff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.intro h1 {
+  margin: 7px 0 10px;
+  font-size: clamp(30px, 5vw, 48px);
+  letter-spacing: -0.04em;
+}
+
+.intro p {
+  margin: 0;
+  color: #979eae;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(21, 25, 35, 0.86);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.23);
+}
+
+.controls {
+  position: sticky;
+  top: 20px;
+  padding: 18px;
+}
+
+.controls h2,
+.log h2 {
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+
+.controls label:not(.check) {
+  display: block;
+  margin: 11px 0 6px;
+  color: #aeb3bf;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 9px;
+  background: #0f131b;
+  color: #858d9e;
+  padding: 0 10px;
+}
+
+.input-row input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #b8beca;
+  font-size: 11px;
+}
+
+.primary,
+.secondary {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 9px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.primary {
+  border: 0;
+  background: linear-gradient(135deg, #7a5cff, #5d42dc);
+  color: #fff;
+}
+
+.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #c8ccd5;
+}
+
+.auction-heading {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 18px !important;
+  padding-top: 17px;
+}
+
+.stage {
+  display: grid;
+  gap: 18px;
+}
+
+.auction {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(300px, 1.1fr);
+  min-height: 410px;
+  overflow: hidden;
+}
+
+.video-placeholder {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 410px;
+  background:
+    linear-gradient(0deg, rgba(4, 6, 10, 0.85), transparent 48%),
+    linear-gradient(145deg, #313849, #151923 58%, #5e46ba);
+  padding: 20px;
+}
+
+.video-placeholder::before {
+  position: absolute;
+  inset: 22% 17%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  box-shadow: 0 0 70px rgba(131, 99, 255, 0.35);
+  content: "";
+}
+
+.live-pill {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: #e5485b;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 5px 8px;
+}
+
+.live-pill span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.seller {
+  position: relative;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auction-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 34px;
+}
+
+.lot {
+  color: #8d7aff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.auction-content h2 {
+  margin: 8px 0 5px;
+  font-size: 24px;
+  letter-spacing: -0.025em;
+}
+
+.subtle {
+  margin: 0;
+  color: #7f8798;
+  font-size: 12px;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 26px;
+}
+
+.price-grid div {
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 13px;
+}
+
+.price-grid span,
+.price-grid strong {
+  display: block;
+}
+
+.price-grid span {
+  color: #81899a;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.price-grid strong {
+  margin-top: 3px;
+  font-size: 20px;
+}
+
+.bid-status {
+  min-height: 20px;
+  margin-top: 16px;
+  color: #9ea5b4;
+  font-size: 12px;
+}
+
+.bid-button {
+  min-height: 48px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: #f2f3f6;
+  color: #11141b;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.bid-button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.log {
+  padding: 16px;
+}
+
+.log-head {
+  display: flex;
+  align-items: center;
+}
+
+.log-head h2 {
+  flex: 1;
+}
+
+.log-head span {
+  color: #7e8799;
+  font-size: 10px;
+}
+
+#simLog {
+  max-height: 180px;
+  overflow: auto;
+}
+
+#simLog p {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin: 0;
+  color: #8991a2;
+  font-size: 11px;
+  padding: 9px 0;
+}
+
+dialog {
+  width: min(420px, calc(100% - 30px));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: #181c26;
+  box-shadow: 0 25px 90px rgba(0, 0, 0, 0.5);
+  color: #f4f5f8;
+  padding: 22px;
+}
+
+dialog::backdrop {
+  background: rgba(3, 5, 8, 0.72);
+}
+
+dialog h2 {
+  margin: 8px 0;
+  font-size: 20px;
+}
+
+dialog p {
+  color: #8d95a5;
+  font-size: 12px;
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .workspace,
+  .auction {
+    grid-template-columns: 1fr;
+  }
+
+  .controls {
+    position: static;
+  }
+
+  .video-placeholder {
+    min-height: 260px;
+  }
+}

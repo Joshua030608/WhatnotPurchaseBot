@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" data-wnpb-simulator="true">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Whatnot Bot Simulator</title>
+    <link rel="stylesheet" href="simulator.css">
+    <link rel="stylesheet" href="../content/overlay.css">
+  </head>
+  <body>
+    <main class="layout">
+      <section class="intro">
+        <span class="eyebrow">Safe local test page</span>
+        <h1>Whatnot Bot Simulator</h1>
+        <p>Exercise the same detector, decision engine, overlay, and click path used on Whatnot without placing a real bid.</p>
+      </section>
+
+      <section class="workspace">
+        <aside class="controls card">
+          <h2>Bot controls</h2>
+          <label for="simMax">Maximum bid</label>
+          <div class="input-row"><span>$</span><input id="simMax" type="number" min="0.01" step="0.01" value="25.00"></div>
+          <label class="check"><input id="simTestMode" type="checkbox" checked><span>Test mode</span></label>
+          <label class="check"><input id="simConfirmation" type="checkbox"><span>Require bid confirmation</span></label>
+          <button class="primary" id="simArm" type="button">Arm bot</button>
+          <button class="secondary" id="simStop" type="button">Stop bot</button>
+
+          <h2 class="auction-heading">Auction controls</h2>
+          <label for="simIncrement">Bid increment</label>
+          <div class="input-row"><span>$</span><input id="simIncrement" type="number" min="0.01" step="0.01" value="1.00"></div>
+          <button class="secondary" id="simOutbid" type="button">Competitor outbids</button>
+          <button class="secondary" id="simNewAuction" type="button">Start new auction</button>
+          <button class="secondary" id="simEndAuction" type="button">End auction</button>
+        </aside>
+
+        <section class="stage">
+          <article class="auction card" data-wnpb-auction data-auction-id="sim-1" data-wnpb-bid-state="neutral" data-wnpb-ended="false">
+            <div class="video-placeholder">
+              <div class="live-pill"><span></span> LIVE</div>
+              <div class="seller">Demo Seller</div>
+            </div>
+            <div class="auction-content">
+              <span class="lot">LOT <span id="lotNumber">1</span></span>
+              <h2 data-wnpb-role="title">Permissioned Demo Item</h2>
+              <p class="subtle">Direct UI automation test auction</p>
+              <div class="price-grid">
+                <div><span>Current bid</span><strong data-wnpb-role="current-price">$10</strong></div>
+                <div><span>Next bid</span><strong data-wnpb-role="next-bid">$11</strong></div>
+              </div>
+              <div class="bid-status" data-wnpb-role="bid-status" role="status">Open for bids</div>
+              <button class="bid-button" data-wnpb-role="bid-button" type="button" aria-label="Bid $11">Bid $11</button>
+            </div>
+          </article>
+
+          <section class="log card">
+            <div class="log-head"><h2>Simulator events</h2><span id="simState">Ready</span></div>
+            <div id="simLog"><p>No events yet.</p></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="confirmDialog" role="dialog">
+      <form method="dialog">
+        <span class="eyebrow">Confirm bid</span>
+        <h2>Place a bid of <span id="confirmAmount">$11</span>?</h2>
+        <p>This modal exercises the extension’s amount-verification path.</p>
+        <div class="dialog-actions">
+          <button value="cancel" class="secondary" type="submit">Cancel</button>
+          <button id="confirmBid" data-wnpb-role="confirm-bid" class="primary" value="default" type="button">Confirm bid $11</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="browser-shim.js"></script>
+    <script src="../shared/money.js"></script>
+    <script src="../shared/settings.js"></script>
+    <script src="../shared/decision.js"></script>
+    <script src="../content/whatnot-adapter.js"></script>
+    <script src="../content/content.js"></script>
+    <script src="simulator.js"></script>
+  </body>
+</html>
