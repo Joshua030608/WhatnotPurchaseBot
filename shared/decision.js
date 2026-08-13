@@ -10,7 +10,7 @@
     STOP: "stop"
   });
   const auctionStartDelayRangeMs = Object.freeze({ min: 2000, max: 7000 });
-  const outbidRebidDelayRangeMs = Object.freeze({ min: 1000, max: 3000 });
+  const outbidRebidDelayRangeMs = Object.freeze({ min: 1, max: 1000 });
 
   function randomDelayMs(range, random = Math.random) {
     const sample = Number(random());
