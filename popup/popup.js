@@ -59,7 +59,7 @@
       waiting_for_outbid: currentSettings.testMode
         ? "Waiting for the next bid amount"
         : "Waiting until Whatnot confirms you were outbid",
-      outbid_rebid_delay: "Waiting through the 1–3 second re-bid delay",
+      outbid_rebid_delay: "Waiting through the 1–1,000 ms re-bid delay",
       bid_state_unknown: "Cannot verify who is winning",
       action_pending: "Checking the result of the last action",
       duplicate_state: "This bid state was already handled",

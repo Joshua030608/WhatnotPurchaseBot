@@ -15,7 +15,7 @@
     maximum_reached: "Next bid exceeds your maximum",
     already_winning: "You are currently winning",
     waiting_for_outbid: "Waiting for a confirmed outbid",
-    outbid_rebid_delay: "Waiting through the 1–3 second re-bid delay",
+    outbid_rebid_delay: "Waiting through the 1–1,000 ms re-bid delay",
     bid_state_unknown: "Cannot verify who is winning",
     action_pending: "Checking bid result",
     duplicate_state: "Already handled this bid state",

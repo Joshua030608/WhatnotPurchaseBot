@@ -2,7 +2,7 @@
 
 A permissioned Chrome Manifest V3 demonstration that watches a Whatnot live auction and interacts with the visible bidding UI. It does not use Whatnot's native Max Bid feature and does not call a private purchase or bidding endpoint.
 
-Current release: **1.0.0**.
+Current release: **1.0.1**.
 
 The extension is intentionally fail-closed. Test mode is enabled by default, live bidding requires an explicit confirmation, and uncertain UI states stop the bot instead of retrying blindly.
 
@@ -12,7 +12,7 @@ The extension is intentionally fail-closed. Test mode is enabled by default, liv
 - Arms only the current browser tab.
 - Detects the visible current price, next valid bid, bid button, auction status, and winning/outbid state.
 - Chooses a new randomized 2–7 second delay after detecting the start of each auction.
-- Chooses a new randomized 1–3 second delay after detecting each outbid.
+- Chooses a new randomized 1–1,000 ms delay after detecting each outbid.
 - Clicks the normal Whatnot bid button only when the next valid bid is at or below the configured maximum.
 - Uses Whatnot's current `show-bid-button` press-and-release interaction instead of relying on a generic click.
 - Waits for a positive outbid signal before bidding again, preventing the extension from bidding against itself.
@@ -28,7 +28,7 @@ The extension will not bid when any of these conditions apply:
 - The maximum is missing or invalid.
 - The active auction or visible bid control cannot be identified.
 - The randomized 2–7 second auction-start delay has not elapsed.
-- The randomized 1–3 second outbid delay has not elapsed.
+- The randomized 1–1,000 ms outbid delay has not elapsed.
 - The next valid bid cannot be read from the page.
 - The next valid bid is greater than the maximum.
 - Whatnot indicates that the user is already winning.
